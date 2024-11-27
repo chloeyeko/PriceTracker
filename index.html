@@ -19,7 +19,7 @@
             border-radius: 10px;
             background-color: #ffffff;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            position: relative; /* For positioning the Show All button */
+            position: relative;
         }
         h2 {
             text-align: center;
@@ -53,11 +53,11 @@
             right: 10px;
             width: 40px;
             height: 40px;
-            background-color: #28a745; /* Green color */
+            background-color: #28a745;
             border: none;
             color: white;
             cursor: pointer;
-            border-radius: 50%; /* Circular button */
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -98,13 +98,13 @@
             word-wrap: break-word;
         }
         li button {
-            width: 30px; /* Small square button */
+            width: 30px;
             height: 30px;
             background-color: #ff6b6b;
             border: none;
             color: white;
             cursor: pointer;
-            border-radius: 50%; /* Circular button */
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -113,8 +113,8 @@
             background-color: #c53030;
         }
         li button i {
-            font-size: 16px; /* Icon size */
-            color: white; /* Icon color */
+            font-size: 16px;
+            color: white;
         }
     </style>
 </head>
@@ -129,8 +129,8 @@
         <label for="item">Item Name:</label>
         <input type="text" id="item" placeholder="Enter item name">
 
-        <label for="currentPrice">Current Price (HKD):</label>
-        <input type="number" id="currentPrice" placeholder="Enter current price">
+        <label for="currentPrice">Current Price (Optional):</label>
+        <input type="number" id="currentPrice" inputmode="numeric" placeholder="Enter current price (optional)">
 
         <label for="volume">Volume (Optional):</label>
         <input type="text" id="volume" placeholder="Enter volume (e.g., 250ml)">
@@ -174,25 +174,32 @@
         // Function to handle price comparison and updates
         function checkPrice() {
             const itemName = document.getElementById('item').value.trim();
-            const currentPrice = parseFloat(document.getElementById('currentPrice').value);
+            const currentPrice = document.getElementById('currentPrice').value.trim();
             const volume = document.getElementById('volume').value.trim();
             const location = document.getElementById('location').value.trim();
             const resultDiv = document.getElementById('result');
 
-            if (!itemName || isNaN(currentPrice)) {
-                resultDiv.innerHTML = '<p class="expensive">Item name and price are required!</p>';
+            if (!itemName) {
+                resultDiv.innerHTML = '<p class="expensive">Item name is required!</p>';
+                return;
+            }
+
+            // If no current price is entered, just list matching items
+            if (!currentPrice) {
+                loadPrices(itemName);
+                resultDiv.innerHTML = '<p>Listing matching items...</p>';
                 return;
             }
 
             const key = `${itemName}${volume ? `-${volume}` : ''}`;
             let storedData = JSON.parse(localStorage.getItem('priceData')) || {};
 
-            if (!storedData[key] || currentPrice < storedData[key].price) {
+            if (!storedData[key] || parseFloat(currentPrice) < storedData[key].price) {
                 // Update or add the new lowest price
                 storedData[key] = { 
                     item: itemName, 
                     volume: volume || null, 
-                    price: currentPrice, 
+                    price: parseFloat(currentPrice), 
                     location: location || null 
                 };
                 localStorage.setItem('priceData', JSON.stringify(storedData));
