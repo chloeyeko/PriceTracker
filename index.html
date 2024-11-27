@@ -229,16 +229,24 @@
 
         // Function to handle price comparison and updates
         function checkPrice() {
-            const itemName = document.getElementById('item').value.trim().toLowerCase();
-            const currentPrice = document.getElementById('currentPrice').value.trim();
-            const volume = document.getElementById('volume').value.trim();
-            const location = document.getElementById('location').value.trim();
-            const resultDiv = document.getElementById('result');
+    		const itemName = document.getElementById('item').value.trim().toLowerCase();
+    		const currentPrice = document.getElementById('currentPrice').value.trim();
+    		const volume = document.getElementById('volume').value.trim();
+    		const location = document.getElementById('location').value.trim();
+    		const resultDiv = document.getElementById('result');
 
-            if (!itemName) {
-                resultDiv.innerHTML = '<p class="expensive">Item name is required!</p>';
-                return;
-            }
+    	if (!itemName) {
+        	resultDiv.innerHTML = '<p class="expensive">Item name is required!</p>';
+        	return;
+    	}
+
+		
+    	// If only the item name is entered, show matching items and do not store data
+    		if (!currentPrice) {
+       	 	loadPrices(itemName); // Show search list
+        	resultDiv.innerHTML = '<p>Listing matching items...</p>';
+        	return;
+    	}
 
             const key = `${itemName}${volume ? `-${volume}` : ''}`;
             const date = new Date().toLocaleString(); // Add date and time
@@ -263,6 +271,8 @@
             // Refresh the displayed list to show matching items
             loadPrices(itemName);
         }
+
+		
 
         // Function to delete an item
         function deleteItem(key) {
