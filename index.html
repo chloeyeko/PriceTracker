@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>買買買</title>
+    <title>買買買 - Advanced Price Tracker</title>
+    <!-- Include Font Awesome for icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
         body {
@@ -47,6 +48,24 @@
         button:hover {
             background-color: #0056b3;
         }
+        .clear-btn {
+            width: 40px;
+            height: 40px;
+            background-color: #d4a5f9; /* Light purple */
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-left: 10px;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .clear-btn:hover {
+            background-color: #b392d1;
+        }
         .show-all-btn {
             position: absolute;
             top: 10px;
@@ -69,7 +88,8 @@
         }
         .result {
             margin-top: 20px;
-            font-size: 18px;
+            font-size: 25px;
+		font-weight: bold;
             color: #333;
         }
         .cheaper {
@@ -83,19 +103,33 @@
             padding: 0;
         }
         li {
-            margin-bottom: 10px;
+            margin-bottom: 2px;
             background: #f9f9f9;
-            padding: 10px;
+            padding: 5px;
             border: 1px solid #ddd;
             border-radius: 5px;
             position: relative;
             display: flex;
+            flex-direction: row;
             align-items: center;
-            justify-content: space-between;
+ 	    font-size: 14px;
         }
         li span {
             flex-grow: 1;
             word-wrap: break-word;
+	    font-size: 14px; /* Smaller font size for text */
+        }
+        li small {
+            color: #666;
+	    margin:2px;
+	    padding: 5px; /* Compact padding */
+	    position: relative;
+    	    display: flex;
+    	    flex-direction: column; /* Stack text and date vertically */
+    	    align-items: flex-start; /* Align content to the left */
+            font-size: 12px;
+            margin-top: 5px;
+	    
         }
         li button {
             width: 30px;
@@ -108,6 +142,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            margin-left: auto;
         }
         li button:hover {
             background-color: #c53030;
@@ -129,16 +164,21 @@
         <label for="item">Item Name:</label>
         <input type="text" id="item" placeholder="Enter item name">
 
-        <label for="currentPrice">Current Price (Optional):</label>
-        <input type="number" id="currentPrice" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="Enter current price (optional)">
+        <label for="currentPrice">Current Price:</label>
+        <input type="number" id="currentPrice" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="Enter current price">
 
-        <label for="volume">Volume (Optional):</label>
+        <label for="volume">Volume:</label>
         <input type="text" id="volume" placeholder="Enter volume (e.g., 250ml)">
 
-        <label for="location">Location (Optional):</label>
+        <label for="location">Location:</label>
         <input type="text" id="location" placeholder="Enter location">
 
-        <button onclick="checkPrice()">Compare and Update Price</button>
+        <div style="display: flex; align-items: center;">
+            <button onclick="checkPrice()">Compare and Update Price</button>
+            <button class="clear-btn" onclick="clearInputs()" title="Clear Inputs">
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
 
         <div class="result" id="result"></div>
 
@@ -147,20 +187,36 @@
     </div>
 
     <script>
+        // Function to clear input fields
+        function clearInputs() {
+            document.getElementById('item').value = '';
+            document.getElementById('currentPrice').value = '';
+            document.getElementById('volume').value = '';
+            document.getElementById('location').value = '';
+        }
+
         // Function to load matching data from LocalStorage
         function loadPrices(query = '') {
             const priceList = document.getElementById('priceList');
             priceList.innerHTML = ''; // Clear the list
 
             const storedData = JSON.parse(localStorage.getItem('priceData')) || {};
+            const searchTerms = query.toLowerCase().trim().split(/\s+/); // Split query into terms
+
             for (const [key, value] of Object.entries(storedData)) {
-                if (key.toLowerCase().includes(query.toLowerCase())) {
+                const itemName = key.toLowerCase();
+                const isMatch = searchTerms.every(term => itemName.includes(term)); // Check all terms match
+
+                if (isMatch) {
                     const li = document.createElement('li');
                     li.innerHTML = `
                         <span><strong>${value.item}</strong> ${value.volume ? `(${value.volume})` : ''}: 
                         HKD ${value.price}${value.location ? ` @ ${value.location}` : ''}</span>
+                        <small>Added on: ${value.date || 'N/A'}</small>
                         <button onclick="deleteItem('${key}')"><i class="fas fa-trash"></i></button>
                     `;
+                    // Add click event to edit the price
+                    li.querySelector('span').addEventListener('click', () => editPrice(key));
                     priceList.appendChild(li);
                 }
             }
@@ -168,12 +224,12 @@
 
         // Function to show all items
         function showAllItems() {
-            loadPrices(); // No query passed, so it shows all items
+            loadPrices(''); // Pass an empty string to show all items
         }
 
         // Function to handle price comparison and updates
         function checkPrice() {
-            const itemName = document.getElementById('item').value.trim();
+            const itemName = document.getElementById('item').value.trim().toLowerCase();
             const currentPrice = document.getElementById('currentPrice').value.trim();
             const volume = document.getElementById('volume').value.trim();
             const location = document.getElementById('location').value.trim();
@@ -184,14 +240,9 @@
                 return;
             }
 
-            // If no current price is entered, just list matching items
-            if (!currentPrice) {
-                loadPrices(itemName);
-                resultDiv.innerHTML = '<p>Listing matching items...</p>';
-                return;
-            }
-
             const key = `${itemName}${volume ? `-${volume}` : ''}`;
+            const date = new Date().toLocaleString(); // Add date and time
+
             let storedData = JSON.parse(localStorage.getItem('priceData')) || {};
 
             if (!storedData[key] || parseFloat(currentPrice) < storedData[key].price) {
@@ -200,7 +251,8 @@
                     item: itemName, 
                     volume: volume || null, 
                     price: parseFloat(currentPrice), 
-                    location: location || null 
+                    location: location || null,
+                    date: date
                 };
                 localStorage.setItem('priceData', JSON.stringify(storedData));
                 resultDiv.innerHTML = `<p class="cheaper">Updated lowest price for "${itemName}"${volume ? ` (${volume})` : ''}: HKD ${currentPrice}${location ? ` @ ${location}` : ''}</p>`;
@@ -217,7 +269,22 @@
             let storedData = JSON.parse(localStorage.getItem('priceData')) || {};
             delete storedData[key];
             localStorage.setItem('priceData', JSON.stringify(storedData));
-            loadPrices(document.getElementById('item').value.trim());
+            loadPrices();
+        }
+
+        // Function to edit the price
+        function editPrice(key) {
+            const storedData = JSON.parse(localStorage.getItem('priceData')) || {};
+            const item = storedData[key];
+            if (item) {
+                const newPrice = prompt(`Edit price for "${item.item}" (${item.volume || 'no volume specified'}):`, item.price);
+                if (newPrice && !isNaN(newPrice)) {
+                    item.price = parseFloat(newPrice);
+                    storedData[key] = item;
+                    localStorage.setItem('priceData', JSON.stringify(storedData));
+                    loadPrices();
+                }
+            }
         }
 
         // Function to hide keyboard on "Enter"
@@ -238,5 +305,59 @@
             addHideKeyboardListeners();
         });
     </script>
+    <!-- Add Import and Export buttons here -->
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+        <button onclick="importData()" style="background-color: #333; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Import List</button>
+        <button onclick="exportData()" style="background-color: #333; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Export List</button>
+        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleFileImport(event)">
+    </div>
+
+    <script>
+        // Add the Import and Export functions here
+        function exportData() {
+            const storedData = JSON.parse(localStorage.getItem('priceData')) || {};
+            const jsonData = JSON.stringify(storedData, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'priceData.json';
+            a.click();
+
+            URL.revokeObjectURL(url); // Clean up the URL
+        }
+
+        function importData() {
+            const importFileInput = document.getElementById('importFile');
+            importFileInput.click(); // Trigger file selection dialog
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                alert('No file selected.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (typeof importedData === 'object' && importedData !== null) {
+                        localStorage.setItem('priceData', JSON.stringify(importedData));
+                        alert('Data imported successfully!');
+                        loadPrices(); // Refresh the displayed list
+                    } else {
+                        throw new Error('Invalid file format.');
+                    }
+                } catch (error) {
+                    alert('Failed to import data. Please ensure the file is valid.');
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
 </body>
 </html>
+
